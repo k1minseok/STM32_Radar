@@ -112,7 +112,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 			// calculate distance
 			/*
 			 * CLK = 1Mhz -> 1clk = 1us
-			 * distance = velocity * time = 340[m] * (CNT/2)[us]) = 0.034 * CNT / 2
+			 * distance = velocity*time = 340[m/s]*(CNT/2)[us] = 0.034*CNT/2[cm]
 			 */
 			Distance = Difference * 0.034 / 2;
 			// Next Interrupt -> Rising edge set
