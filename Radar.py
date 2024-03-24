@@ -7,9 +7,9 @@ WIDTH = 640
 HEIGHT = 480
 angle = 0
 direction = 0
-objects = [[0,0],[10,0],[20,0],[30,0],[40,0],[50,0],[60,0],[70,110],[80,0],
-           [90,0],[100,0],[110,0],[120,0],[130,0],[140,30],[150,0],[160,0],
-           [170,150],[180,0]]     # 2차원 리스트
+objects = [[0,0],[10,0],[20,0],[30,0],[40,0],[50,0],[60,0],[70,0],[80,0],
+           [90,0],[100,0],[110,0],[120,0],[130,0],[140,0],[150,0],[160,0],
+           [170,0],[180,0]]     # 2차원 리스트
 
 ser = serial.Serial("COM11", 115200)
 
@@ -34,14 +34,15 @@ def updateScan():
     global sendingAngle
     receiveDistance = 0
 
-    #각도 전송
-    if angle % 10 == 0:     # angle==10 일때만 실행(리스트가 angle 10 단위)
+    #각도 전송(0도 10도 20도... 10도 단위로 Servo Motor 동작)
+    if angle % 10 == 0:     # angle==10 일때만(100ms에 한번씩) 실행
+                            # (리스트 angle 10 단위)
         sendingAngle = angle
         mask = b'\x7f'
         ser.write(bytes(bytearray([0x02, 0x52])))
         angleH = (angle >> 7) + 128
-        angleL = (angle & mask[0]) + 128   # 0b1000 0000
-        crc = (0x02 + 0x52 + angleH + angleL) % 256
+        angleL = (angle & mask[0]) + 128   # 128==0b1000 0000
+        crc = (0x02 + 0x52 + angleH + angleL) % 256     # 1byte 범위
         ser.write(bytes(bytearray([angleH, angleL, crc, 0x03])))
 
     # 거리 수신
@@ -53,7 +54,7 @@ def updateScan():
             lostData = False
             while ser.in_waiting < 5:    # 5글자 대기
                 # 타임아웃 처리
-                if time.time() > timeout:   # 2ms 넘으면 lost data
+                if time.time() > timeout:   # 2ms 넘으면 lost data(=error)
                     lostData = True
                     break
             if lostData == False:
@@ -69,7 +70,7 @@ def updateScan():
                             receiveDistance = int.from_bytes(data_one) << 7
                             data_one = bytes([data[2] & mask[0]])
                             receiveDistance += int.from_bytes(data_one)
-                            # 물체 업데이트
+                            # 물체 위치(리스트) 업데이트
                             for obj in objects:
                                 if obj[0] == sendingAngle:
                                     obj[1] = receiveDistance
@@ -82,6 +83,12 @@ def updateScan():
     length = radius
     x = radius + math.cos(angle * math.pi / 180) * length
     """
+    cos(angle) = x/distance
+    x = cos(angle) * distance
+    
+    sin(angle) = y/distance
+    y = sin(angle) * distance
+    
     cos(x) : -1 ~ +1
     cos(x) * length : -320 ~ +320
     radius + cos(x) * length : 0 ~ +640
